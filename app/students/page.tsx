@@ -7,56 +7,47 @@ import AddStudentModal from "@/components/add-student-modal";
 import { Search, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Student as BackendStudent, ClassSummary } from "@/lib/types"; // Adjust path as necessary
+import { studentsClient } from "@/lib/client"; // Adjust path as necessary
 
-type Student = {
-  id: string;
-  name: string;
-  classAssigned: string;
-  points: number;
-  avatarUrl?: string | null;
+// Define the type for the data structure used on this page
+// It extends the backend Student model but uses the populated class name.
+type StudentListItem = BackendStudent & {
+  class: ClassSummary; // The backend populates the 'class' field with details
+  avatarUrl?: string | null; // Optional avatar URL field
 };
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
-  // fetch students
-  useEffect(() => {
-    let mounted = true;
+  // Function to load students using the API client
+  const loadStudents = async () => {
     setLoading(true);
     setError(null);
+    try {
+      // Use the type-safe studentsClient.list
+      const { items } = await studentsClient.list();
+      
+      // The backend populates the 'class' field with the class object (including name)
+      // We assume the populated data matches the structure of StudentListItem
+      setStudents(items as StudentListItem[]);
+    } catch (err) {
+      console.error("Failed to load students:", err);
+      setError("Could not load students. Please try again.");
+      setStudents([]); // Clear data on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetch("/api/students")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-        return (await res.json()) as Student[];
-      })
-      .then((data) => {
-        if (!mounted) return;
-        setStudents(data || []);
-      })
-      .catch((err) => {
-        console.error(err);
-        if (!mounted) return;
-        setError("Could not load students. Showing sample data.");
-        // fallback sample data
-        setStudents([
-          { id: "s1", name: "Aisha Khan", classAssigned: "XII - Physics", points: 120 },
-          { id: "s2", name: "Rohit Sharma", classAssigned: "XI - Maths", points: 95 },
-          { id: "s3", name: "Neha Gupta", classAssigned: "X - Chemistry", points: 140 },
-        ]);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
+  // Initial fetch students
+  useEffect(() => {
+    loadStudents();
   }, []);
 
   // debounce query input
@@ -69,7 +60,10 @@ export default function StudentsPage() {
   const filtered = useMemo(() => {
     if (!debouncedQuery) return students;
     const q = debouncedQuery.toLowerCase();
-    return students.filter((s) => s.name.toLowerCase().includes(q) || s.classAssigned.toLowerCase().includes(q));
+    return students.filter((s) => 
+      s.name.toLowerCase().includes(q) || 
+      (s.class && s.class.name.toLowerCase().includes(q)) // Search by populated class name
+    );
   }, [students, debouncedQuery]);
 
   return (
@@ -103,7 +97,8 @@ export default function StudentsPage() {
               isOpen={modalOpen}
               onClose={() => setModalOpen(false)}
               onSaved={(student) => {
-                setStudents((prev) => [...prev, student]);
+                // Assuming onSaved returns a StudentListItem-like structure
+                setStudents((prev) => [...prev, student as StudentListItem]);
               }}
             />
           </div>
@@ -124,23 +119,26 @@ export default function StudentsPage() {
                     <ul className="divide-y divide-slate-800">
                       {filtered.map((s) => (
                         <motion.li
-                          key={s.id}
+                          key={s._id} // Use the actual Mongo ID field
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           whileHover={{ scale: 1.01 }}
                           className="flex items-center justify-between py-3"
                         >
                           <div className="flex items-center gap-4">
-                            <StudentAvatar student={s} />
+                            {/* Assuming you want to keep the avatar logic but use 's' */}
+                            <StudentAvatar student={s} /> 
                             <div>
                               <div className="font-medium">{s.name}</div>
-                              <div className="text-xs text-slate-500">{s.classAssigned}</div>
+                              {/* Use the populated class name, checking if 'class' is populated */}
+                              <div className="text-xs text-slate-500">{s.class ? s.class.name : "Unassigned"}</div>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-4">
-                            <div className="text-sm font-semibold text-emerald-300">{s.points}</div>
-                            <Link href={`/students/${s.id}`} className="p-2 rounded-md hover:bg-slate-800/40">
+                            {/* Use 'totalpoints' from the Student model */}
+                            <div className="text-sm font-semibold text-emerald-300">{s.totalpoints} pts</div>
+                            <Link href={`/students/${s._id}`} className="p-2 rounded-md hover:bg-slate-800/40">
                               <span className="sr-only">Open {s.name}</span>
                               <ArrowRight />
                             </Link>
@@ -159,8 +157,9 @@ export default function StudentsPage() {
   );
 }
 
-function StudentAvatar({ student }: { student: Student }) {
-  // if avatarUrl available, show <img>, otherwise initials circle
+// Updated StudentAvatar to use the StudentListItem type
+function StudentAvatar({ student }: { student: StudentListItem }) {
+  // Use the optional avatarUrl if available, falling back to initials
   const initials = student.name
     .split(" ")
     .map((n) => n[0])

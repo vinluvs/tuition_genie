@@ -1,136 +1,220 @@
-// lib/client.ts
-// Type-safe, CORS-friendly frontend client for your Next.js app.
-// JSON bodies are stringified; FormData is passed through unchanged.
 
-export type ID = string;
+// src/lib/client.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Typed frontend client for your backend routes.
+ * Assumes API returns:
+ *  - POST /auth/login  -> { token, user }
+ *  - POST /auth/signup -> { token, user }
+ *  - GET  /auth/me     -> { user }
+ *  - List endpoints    -> { items, total }
+ *
+ * Usage:
+ *  import client from 'src/lib/client';
+ *  await client.login(email, pass);
+ *  const classes = await client.listClasses({ page:1, limit:20 });
+ */
 
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-const USE_CREDENTIALS = (process.env.NEXT_PUBLIC_USE_CREDENTIALS ?? 'true') === 'true';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
 
+import type {
+  ID,
+  ApiList,
+  ApiError,
+  User,
+  LoginPayload,
+  LoginResponse,
+  SignupPayload,
+  ClassModel,
+  CreateClassPayload,
+  UpdateClassPayload,
+  StudentModel,
+  CreateStudentPayload,
+  UpdateStudentPayload,
+  FeeModel,
+  GenerateFeePayload,
+  UpdateFeePayload,
+  ClassLogModel,
+  CreateClassLogPayload,
+  UpdateClassLogPayload,
+  TestScoreModel,
+  CreateTestPayload,
+  UpdateTestPayload,
+  StudentTestScoreSummary,
+  ListParams
+} from './types';
+
+type Json = any;
+
+function buildQuery(params?: Record<string, any>) {
+  if (!params) return '';
+  const qp = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => {
+      if (Array.isArray(v)) return v.map(x => `${encodeURIComponent(k)}=${encodeURIComponent(String(x))}`).join('&');
+      return `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+    })
+    .join('&');
+  return qp ? `?${qp}` : '';
+}
+
+/* Token helpers */
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  try { return localStorage.getItem('token'); } catch { return null; }
+  return localStorage.getItem('token');
+}
+function setToken(token: string | null) {
+  if (typeof window === 'undefined') return;
+  if (token) localStorage.setItem('token', token);
+  else localStorage.removeItem('token');
 }
 
-async function parseResponse<T = any>(res: Response): Promise<T> {
+/* Response parser / error normalizer */
+async function parseResponse(res: Response) {
   const text = await res.text();
-  const ct = res.headers.get('content-type') ?? '';
-  const body = ct.includes('application/json') ? (text ? JSON.parse(text) : undefined) : text;
+  let body: any;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!res.ok) {
-    const msg = (body && (body.error || body.message)) || text || res.statusText;
-    const err: any = new Error(String(msg));
-    err.status = res.status;
-    err.body = body;
+    const err: ApiError = (body && typeof body === 'object') ? { status: res.status, ...body } : { status: res.status, error: body || res.statusText };
     throw err;
   }
-  return body as T;
+  return body;
 }
 
-type ReqOpts = {
-  method?: string;
-  body?: any;
-  headers?: Record<string, string>;
-  auth?: boolean; 
-};
+/* Low-level fetch helper that attaches token */
+async function apiFetch(path: string, opts: RequestInit = {}) {
+  const incoming = opts.headers as HeadersInit | undefined;
+  const headers = new Headers(incoming);
 
-async function request<T = any>(path: string, opts: ReqOpts = {}): Promise<T> {
-  const url = path.startsWith('http') ? path : `${BASE}${path.startsWith('/') ? '' : '/'}${path}`;
-  const method = (opts.method || 'GET').toUpperCase();
-  const headers: Record<string, string> = { ...(opts.headers || {}) };
-
-  let body: BodyInit | undefined = undefined;
-  if (opts.body !== undefined && opts.body !== null) {
-    // Keep FormData untouched (for file uploads)
-    if (typeof FormData !== 'undefined' && opts.body instanceof FormData) {
-      body = opts.body;
-      // do not set Content-Type header; browser sets multipart/form-data boundary
-    } else {
-      // For regular objects/values: stringify to JSON
-      headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
-      body = JSON.stringify(opts.body);
-    }
+  if (!headers.has('Content-Type') && opts.body && typeof opts.body === 'string') {
+    headers.set('Content-Type', 'application/json');
   }
 
-  if (opts.auth !== false) {
-    const token = getToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-  }
+  const token = getToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const fetchOptions: RequestInit = {
-    method,
-    headers,
-    body,
-    mode: 'cors',
-    credentials: USE_CREDENTIALS ? 'include' : 'omit'
-  };
-
-  const res = await fetch(url, fetchOptions);
-  return parseResponse<T>(res);
+  const fetchOpts: RequestInit = { ...opts, headers };
+  const response = await fetch(`${API_BASE}${path}`, fetchOpts);
+  return parseResponse(response);
 }
 
-/* ---------- clients ---------- */
-
-export const authClient = {
-  login: (email: string, password: string) =>
-    request<{ token: string; name?: string }>('/api/auth/login', { method: 'POST', body: { email, password } }),
-  signup: (payload: { name: string; centerName?: string; email: string; password: string }) =>
-    request<{ token: string; name?: string }>('/api/auth/signup', { method: 'POST', body: payload }),
-  saveToken: (token: string) => { if (typeof window !== 'undefined') localStorage.setItem('token', token); },
-  logout: () => { if (typeof window !== 'undefined') localStorage.removeItem('token'); }
-};
-
-export const classesClient = {
-  list: (params?: Record<string, string>) => {
-    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<any[]>(`/api/classes${qs}`);
+/* ---------- client methods ---------- */
+export const client = {
+  /* Auth */
+  async login(loginpayload: LoginPayload): Promise<LoginResponse> {
+    const body = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(loginpayload) });
+    // backend returns { token, user }
+    if (body.token) setToken(body.token);
+    return body as LoginResponse;
   },
-  get: (id: ID) => request<any>(`/api/classes/${id}`),
-  create: (payload: any) => request<any>('/api/classes', { method: 'POST', body: payload }),
-  update: (id: ID, payload: any) => request<any>(`/api/classes/${id}`, { method: 'PATCH', body: payload }),
-  remove: (id: ID) => request<void>(`/api/classes/${id}`, { method: 'DELETE' })
-};
 
-export const studentsClient = {
-  list: (params?: Record<string, string>) => {
-    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<any>(`/api/students${qs}`);
+  async signup(payload: SignupPayload): Promise<LoginResponse> {
+    const body = await apiFetch('/auth/signup', { method: 'POST', body: JSON.stringify(payload) });
+    if (body.token) setToken(body.token);
+    return body as LoginResponse;
   },
-  get: (id: ID) => request<any>(`/api/students/${id}`),
-  create: (payload: any) => request<any>('/api/students', { method: 'POST', body: payload }),
-  update: (id: ID, payload: any) => request<any>(`/api/students/${id}`, { method: 'PATCH', body: payload }),
-  delete: (id: ID) => request<void>(`/api/students/${id}`, { method: 'DELETE' })
+
+  async me(): Promise<User> {
+    // backend returns { user }
+    const body = await apiFetch('/auth/me', { method: 'GET' });
+    return (body && body.user) ? (body.user as User) : Promise.reject({ status: 500, error: 'Invalid /auth/me response' });
+  },
+
+  logout() { setToken(null); },
+
+  /* Classes */
+  async createClass(payload: CreateClassPayload): Promise<ClassModel> {
+    return apiFetch('/classes', { method: 'POST', body: JSON.stringify(payload) }) as Promise<ClassModel>;
+  },
+  async listClasses(params?: ListParams): Promise<ApiList<ClassModel>> {
+    const q = buildQuery(params);
+    return apiFetch(`/classes${q}`, { method: 'GET' }) as Promise<ApiList<ClassModel>>;
+  },
+  async getClass(id: ID): Promise<ClassModel> {
+    return apiFetch(`/classes/${id}`, { method: 'GET' }) as Promise<ClassModel>;
+  },
+  async updateClass(id: ID, payload: UpdateClassPayload): Promise<ClassModel> {
+    return apiFetch(`/classes/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<ClassModel>;
+  },
+  async deleteClass(id: ID): Promise<void> {
+    await apiFetch(`/classes/${id}`, { method: 'DELETE' });
+  },
+
+  /* Students */
+  async createStudent(payload: CreateStudentPayload): Promise<StudentModel> {
+    return apiFetch('/students', { method: 'POST', body: JSON.stringify(payload) }) as Promise<StudentModel>;
+  },
+  async listStudents(params?: ListParams): Promise<ApiList<StudentModel>> {
+    const q = buildQuery(params);
+    return apiFetch(`/students${q}`, { method: 'GET' }) as Promise<ApiList<StudentModel>>;
+  },
+  async getStudent(id: ID): Promise<StudentModel> {
+    return apiFetch(`/students/${id}`, { method: 'GET' }) as Promise<StudentModel>;
+  },
+  async updateStudent(id: ID, payload: UpdateStudentPayload): Promise<StudentModel> {
+    return apiFetch(`/students/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<StudentModel>;
+  },
+  async deleteStudent(id: ID): Promise<void> {
+    await apiFetch(`/students/${id}`, { method: 'DELETE' });
+  },
+
+  /* Fees */
+  async listFees(params?: ListParams): Promise<ApiList<FeeModel>> {
+    const q = buildQuery(params);
+    return apiFetch(`/fees${q}`, { method: 'GET' }) as Promise<ApiList<FeeModel>>;
+  },
+  async generateFee(payload: GenerateFeePayload): Promise<FeeModel> {
+    return apiFetch('/fees/generate', { method: 'POST', body: JSON.stringify(payload) }) as Promise<FeeModel>;
+  },
+  async updateFee(id: ID, payload: UpdateFeePayload): Promise<FeeModel> {
+    return apiFetch(`/fees/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<FeeModel>;
+  },
+  async deleteFee(id: ID): Promise<void> {
+    await apiFetch(`/fees/${id}`, { method: 'DELETE' });
+  },
+
+  /* ClassLogs */
+  async createClassLog(payload: CreateClassLogPayload): Promise<ClassLogModel> {
+    return apiFetch('/classlogs', { method: 'POST', body: JSON.stringify(payload) }) as Promise<ClassLogModel>;
+  },
+  async listClassLogs(params?: ListParams): Promise<ApiList<ClassLogModel>> {
+    const q = buildQuery(params);
+    return apiFetch(`/classlogs${q}`, { method: 'GET' }) as Promise<ApiList<ClassLogModel>>;
+  },
+  async getClassLog(id: ID): Promise<ClassLogModel> {
+    return apiFetch(`/classlogs/${id}`, { method: 'GET' }) as Promise<ClassLogModel>;
+  },
+  async updateClassLog(id: ID, payload: UpdateClassLogPayload): Promise<ClassLogModel> {
+    return apiFetch(`/classlogs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<ClassLogModel>;
+  },
+  async deleteClassLog(id: ID): Promise<void> {
+    await apiFetch(`/classlogs/${id}`, { method: 'DELETE' });
+  },
+
+  /* Tests */
+  async listTests(params?: ListParams): Promise<ApiList<TestScoreModel>> {
+    const q = buildQuery(params);
+    return apiFetch(`/tests${q}`, { method: 'GET' }) as Promise<ApiList<TestScoreModel>>;
+  },
+  async createTest(payload: CreateTestPayload): Promise<TestScoreModel> {
+    return apiFetch('/tests', { method: 'POST', body: JSON.stringify(payload) }) as Promise<TestScoreModel>;
+  },
+  async getTest(id: ID): Promise<TestScoreModel> {
+    return apiFetch(`/tests/${id}`, { method: 'GET' }) as Promise<TestScoreModel>;
+  },
+  async updateTest(id: ID, payload: UpdateTestPayload): Promise<TestScoreModel> {
+    return apiFetch(`/tests/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<TestScoreModel>;
+  },
+  async deleteTest(id: ID): Promise<void> {
+    await apiFetch(`/tests/${id}`, { method: 'DELETE' });
+  },
+  async getStudentTestScores(studentId: ID): Promise<StudentTestScoreSummary[]> {
+    return apiFetch(`/tests/student/${studentId}`, { method: 'GET' }) as Promise<StudentTestScoreSummary[]>;
+  },
+
+  /* token utils */
+  getToken,
+  setToken,
 };
 
-
-export const testsClient = {
-  create: (payload: any) => request('/api/tests', { method: 'POST', body: payload }),
-  byClass: (classId: ID) => request<any[]>(`/api/tests/by-class/${classId}`),
-  byStudent: (studentId: ID) => request<any[]>(`/api/tests/by-student/${studentId}`)
-};
-
-export const feesClient = {
-  generate: (payload: any) => request('/api/fees/generate', { method: 'POST', body: payload }),
-  pay: (payload: any) => request('/api/fees/pay', { method: 'POST', body: payload }),
-  dues: (month?: string) => request<any[]>(`/api/fees/dues${month ? '?month=' + encodeURIComponent(month) : ''}`),
-  studentFees: (studentId: ID) => request<any[]>(`/api/fees/student/${studentId}`),
-  recentPayments: (limit: number = 10) => request<any[]>(`/api/fees/payments/recent?limit=${limit}`),
-  allPayments: (params?: Record<string, string>) => {
-    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<any[]>(`/api/fees/payments/all${qs}`);
-  }
-};
-
-export const classLogsClient = {
-  create: (payload: any) => request('/api/classlogs', { method: 'POST', body: payload }),
-  byClass: (classId: ID) => request<any[]>(`/api/classlogs/by-class/${classId}`)
-};
-
-
-export default {
-  request,
-  authClient,
-  classesClient,
-  studentsClient,
-  feesClient,
-  testsClient
-};
+export default client;
