@@ -1,20 +1,4 @@
 
-// src/lib/client.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * Typed frontend client for your backend routes.
- * Assumes API returns:
- *  - POST /auth/login  -> { token, user }
- *  - POST /auth/signup -> { token, user }
- *  - GET  /auth/me     -> { user }
- *  - List endpoints    -> { items, total }
- *
- * Usage:
- *  import client from 'src/lib/client';
- *  await client.login(email, pass);
- *  const classes = await client.listClasses({ page:1, limit:20 });
- */
-
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
 
 import type {
@@ -41,7 +25,11 @@ import type {
   CreateTestPayload,
   UpdateTestPayload,
   StudentTestScoreSummary,
-  ListParams
+  ListParams,
+  ExpenseModel,
+  CreateExpensePayload,
+  ReportsDashboard,
+  ReportsParams
 } from './types';
 
 type Json = any;
@@ -103,7 +91,6 @@ export const client = {
   /* Auth */
   async login(loginpayload: LoginPayload): Promise<LoginResponse> {
     const body = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(loginpayload) });
-    // backend returns { token, user }
     if (body.token) setToken(body.token);
     return body as LoginResponse;
   },
@@ -115,7 +102,6 @@ export const client = {
   },
 
   async me(): Promise<User> {
-    // backend returns { user }
     const body = await apiFetch('/auth/me', { method: 'GET' });
     return (body && body.user) ? (body.user as User) : Promise.reject({ status: 500, error: 'Invalid /auth/me response' });
   },
@@ -166,6 +152,9 @@ export const client = {
   async generateFee(payload: GenerateFeePayload): Promise<FeeModel> {
     return apiFetch('/fees/generate', { method: 'POST', body: JSON.stringify(payload) }) as Promise<FeeModel>;
   },
+  async bulkGenerateFees(payload: { classId: ID; month: string }): Promise<any> {
+    return apiFetch('/fees/bulk-generate', { method: 'POST', body: JSON.stringify(payload) }) as Promise<any>;
+  },
   async updateFee(id: ID, payload: UpdateFeePayload): Promise<FeeModel> {
     return apiFetch(`/fees/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<FeeModel>;
   },
@@ -210,6 +199,24 @@ export const client = {
   },
   async getStudentTestScores(studentId: ID): Promise<StudentTestScoreSummary[]> {
     return apiFetch(`/tests/student/${studentId}`, { method: 'GET' }) as Promise<StudentTestScoreSummary[]>;
+  },
+
+  /* Expenses */
+  async createExpense(payload: CreateExpensePayload): Promise<ExpenseModel> {
+    return apiFetch('/expenses', { method: 'POST', body: JSON.stringify(payload) }) as Promise<ExpenseModel>;
+  },
+  async listExpenses(params?: ListParams): Promise<ExpenseModel[]> {
+    const q = buildQuery(params);
+    return apiFetch(`/expenses${q}`, { method: 'GET' }) as Promise<ExpenseModel[]>;
+  },
+  async deleteExpense(id: ID): Promise<void> {
+    await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+  },
+
+  /* Reports */
+  async getDashboardReports(params?: ReportsParams): Promise<ReportsDashboard> {
+    const q = buildQuery(params);
+    return apiFetch(`/reports/dashboard${q}`, { method: 'GET' }) as Promise<ReportsDashboard>;
   },
 
   /* token utils */

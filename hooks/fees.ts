@@ -4,6 +4,7 @@ import client from '@/lib/client';
 import type { GenerateFeePayload, UpdateFeePayload, ListParams } from '@/lib/types';
 import type { InferClientReturn } from '@/lib/utils';
 import { qkey } from '@/lib//utils';
+import type { ID } from '@/lib/types';
 
 export function useFees(params?: ListParams) {
   type T = InferClientReturn<typeof client.listFees>;
@@ -19,6 +20,28 @@ export function useGenerateFee() {
   return useMutation({
     mutationFn: (payload: GenerateFeePayload) => client.generateFee(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['fees'] }),
+  });
+}
+
+/**
+ * useBulkGenerateFees
+ * payload: { classId: ID; month: string }  -> backend: POST /fees/bulk-generate
+ *
+ * On success we invalidate ['fees'] so lists refresh automatically.
+ */
+export function useBulkGenerateFees() {
+  const qc = useQueryClient();
+
+  return useMutation<
+    any,               // TData  - backend response shape (you returned Promise<any>)
+    unknown,           // TError - keep generic unless you have ApiError type
+    { classId: ID; month: string } // TVariables
+  >({
+    mutationFn: (payload) => client.bulkGenerateFees(payload),
+    onSuccess: () => {
+      // refresh fees list after successful bulk generation
+      qc.invalidateQueries({ queryKey: ['fees'] });
+    },
   });
 }
 

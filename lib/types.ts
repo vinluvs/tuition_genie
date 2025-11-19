@@ -185,6 +185,74 @@ export type StudentTestScoreSummary = {
 };
 
 /* -----------------------
+   Expense (NEW)
+   ----------------------- */
+export type ExpenseModel = {
+  _id: ID;
+  userId: ID;
+  title: string;
+  amount: number;
+  category?: string; // "Rent" | "Salary" | "Utilities" | etc.
+  date: string; // ISO date
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateExpensePayload = {
+  title: string;
+  amount: number;
+  category?: string;
+  date?: string;
+  notes?: string;
+};
+
+export type UpdateExpensePayload = Partial<CreateExpensePayload>;
+
+/* -----------------------
+   Reports (NEW)
+   ----------------------- */
+
+/**
+ * Financials returned by /api/reports/dashboard
+ */
+export type Financials = {
+  revenue: number;
+  expenses: number;
+  profit: number;
+  dues: number;
+  status: 'Profit' | 'Loss' | string;
+};
+
+/**
+ * Per-student report entry (matches reports.routes.js)
+ */
+export type StudentReport = {
+  id: ID;
+  name: string;
+  parentsName?: string;
+  phone?: string;
+  metrics: {
+    attendancePercentage: number | 'N/A';
+    classesAttended: number;
+    classesTotal: number;
+    academicPercentage: number | 'N/A';
+    testsTaken: number;
+  };
+  review: string;
+  tags: string[];
+};
+
+export type ReportsDashboard = {
+  financials: Financials;
+  totalStudents: number;
+  reports: StudentReport[];
+};
+
+export type ReportsParams = { month?: string }; // month = "YYYY-MM"
+
+
+/* -----------------------
    List params
    ----------------------- */
 export type ListParams = Record<string, any>;
