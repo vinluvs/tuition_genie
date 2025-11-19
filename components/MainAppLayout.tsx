@@ -1,6 +1,6 @@
 // components/MainAppLayout.tsx
 
-import { AuthGuard } from '@/components/AuthGuard'; // Your auth guard component
+import  AuthGuard  from '@/components/AuthGuard'; // Your auth guard component
 import React from 'react';
 import { SidebarInset, SidebarProvider } from './ui/sidebar';
 import { AppSidebar } from './app-sidebar';
