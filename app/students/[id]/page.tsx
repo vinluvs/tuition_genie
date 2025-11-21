@@ -1,4 +1,3 @@
-import { useFees } from "@/hooks/fees";
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -12,16 +11,18 @@ import {
   Plus,
   AlertTriangle,
 } from "lucide-react";
+import MainAppLayout from "@/components/MainAppLayout";
 import AddStudentModal from "@/components/add-student-modal";
 import AddBillModal from "@/components/add-bill-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStudent, useDeleteStudent } from "@/hooks/students";
 import { useStudentTestScores } from "@/hooks/tests";
+import { useFees } from "@/hooks/fees";
 
 import type { StudentModel, StudentTestScoreSummary, FeeModel } from "@/lib/types";
 
-export default function StudentDetailsPage({ params }: { params: { id: string } }) {
+function StudentDetailsPageContent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
 
@@ -61,7 +62,7 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
   }
 
   return (
-    <main className="min-h-screen bg-linear-to-b from-slate-900 via-[#071021] to-black text-slate-100 px-6 py-8">
+    <div>
       <div className="max-w-5xl mx-auto">
         <Button
           variant="ghost"
@@ -122,21 +123,19 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setTab("performance")}
-              className={`px-3 py-2 rounded-md ${
-                tab === "performance"
-                  ? "bg-emerald-800/30 text-emerald-200"
-                  : "text-slate-300 hover:bg-slate-800/30"
-              }`}
+              className={`px-3 py-2 rounded-md ${tab === "performance"
+                ? "bg-emerald-800/30 text-emerald-200"
+                : "text-slate-300 hover:bg-slate-800/30"
+                }`}
             >
               Performance
             </button>
             <button
               onClick={() => setTab("fees")}
-              className={`px-3 py-2 rounded-md ${
-                tab === "fees"
-                  ? "bg-emerald-800/30 text-emerald-200"
-                  : "text-slate-300 hover:bg-slate-800/30"
-              }`}
+              className={`px-3 py-2 rounded-md ${tab === "fees"
+                ? "bg-emerald-800/30 text-emerald-200"
+                : "text-slate-300 hover:bg-slate-800/30"
+                }`}
             >
               Fees
             </button>
@@ -164,13 +163,13 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
                   <div className="text-xl font-semibold mt-2">
                     {tests && tests.length > 0
                       ? `${Math.round(
-                          (tests.reduce(
-                            (acc, t) => acc + (t.marksObtained || 0) / t.totalMarks,
-                            0
-                          ) /
-                            tests.length) *
-                            100
-                        )}%`
+                        (tests.reduce(
+                          (acc, t) => acc + (t.marksObtained || 0) / t.totalMarks,
+                          0
+                        ) /
+                          tests.length) *
+                        100
+                      )}%`
                       : "N/A"}
                   </div>
                   <div className="text-sm text-slate-500 mt-2">
@@ -244,22 +243,18 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
                           year: "numeric",
                         })}
                       </div>
-                      <div className="text-xs text-slate-500">
-                        {b.referenceId}
-                      </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="font-semibold">
                         ₹{b.baseAmountINR - (b.discountINR || 0)}
                       </div>
                       <div
-                        className={`text-sm ${
-                          b.status === "paid"
-                            ? "text-emerald-300"
-                            : b.status === "due"
+                        className={`text-sm ${b.status === "paid"
+                          ? "text-emerald-300"
+                          : b.status === "due"
                             ? "text-amber-300"
                             : "text-rose-300"
-                        }`}
+                          }`}
                       >
                         {b.status}
                       </div>
@@ -318,6 +313,14 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
           </motion.div>
         </div>
       )}
-    </main>
+    </div>
+  );
+}
+
+export default function StudentDetailsPage({ params }: { params: { id: string } }) {
+  return (
+    <MainAppLayout>
+      <StudentDetailsPageContent params={params} />
+    </MainAppLayout>
   );
 }

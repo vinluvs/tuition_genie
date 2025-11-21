@@ -15,6 +15,7 @@ import {
   DollarSign,
   Eye
 } from "lucide-react";
+import MainAppLayout from "@/components/MainAppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -26,7 +27,7 @@ import AddClassLogModal from "@/components/add-classlog-modal";
 import AddTestScoreModal from "@/components/add-testscore-modal";
 import type { StudentModel, ClassLogModel, TestScoreModel } from "@/lib/types";
 
-export default function ClassDetailPage({ params }: { params: { id: string } }) {
+function ClassDetailPageContent({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -73,7 +74,7 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
   const tests = testsData?.items || [];
 
   return (
-    <main className="min-h-screen bg-linear-to-b from-slate-900 via-[#071021] to-black text-slate-100 px-6 py-8">
+    <div>
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <Button
@@ -472,6 +473,14 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
           </motion.div>
         </div>
       )}
-    </main>
+    </div>
+  );
+}
+
+export default function ClassDetailPage({ params }: { params: { id: string } }) {
+  return (
+    <MainAppLayout>
+      <ClassDetailPageContent params={params} />
+    </MainAppLayout>
   );
 }

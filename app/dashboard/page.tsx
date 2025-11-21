@@ -156,14 +156,14 @@ const DashboardPage = () => {
                     ) : (
                       <div className="flex items-center gap-2">
                         <span className={`font-semibold ${typeof report.metrics.academicPercentage === 'number'
-                            ? report.metrics.academicPercentage >= 90
-                              ? 'text-green-600'
-                              : report.metrics.academicPercentage >= 60
-                                ? 'text-blue-600'
-                                : report.metrics.academicPercentage >= 40
-                                  ? 'text-orange-600'
-                                  : 'text-red-600'
-                            : ''
+                          ? report.metrics.academicPercentage >= 90
+                            ? 'text-green-600'
+                            : report.metrics.academicPercentage >= 60
+                              ? 'text-blue-600'
+                              : report.metrics.academicPercentage >= 40
+                                ? 'text-orange-600'
+                                : 'text-red-600'
+                          : ''
                           }`}>
                           {report.metrics.academicPercentage}%
                         </span>
@@ -214,7 +214,9 @@ const DashboardPage = () => {
 
 const Dashboard = () => {
   return (
-    <DashboardPage />
+    <MainAppLayout>
+      <DashboardPage />
+    </MainAppLayout>
   );
 };
 

@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tuition Genie
 
-## Getting Started
+Tuition Genie is a modern, comprehensive tuition management system designed to streamline the administration of classes, students, and billing. Built with cutting-edge web technologies, it offers a premium user experience with a sleek, responsive interface.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+-   **Dashboard Overview**: Get a bird's-eye view of your tuition center's performance with integrated reports and analytics.
+-   **Class Management**:
+    -   Create and manage classes with detailed schedules (days, times, timezones).
+    -   Track fees and instructor details.
+    -   View class profiles with student lists, logs, and test scores.
+-   **Student Management**:
+    -   Register new students with comprehensive personal and academic details.
+    -   Manage student enrollments and track their progress.
+-   **Academic Tracking**:
+    -   **Class Logs**: Record daily class activities and notes.
+    -   **Test Scores**: Record and monitor student performance on tests.
+-   **Financial Management**:
+    -   **Billing**: Generate and manage bills for students (feature in progress/available via `add-bill-modal`).
+-   **Authentication**: Secure login and signup functionality for administrators/instructors.
+-   **Premium UI/UX**:
+    -   Dark mode support.
+    -   Beautiful, responsive design using Tailwind CSS v4.
+    -   Smooth animations and transitions.
+    -   Custom-styled components (scrollbars, modals, forms).
+
+## 🛠 Tech Stack
+
+-   **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+-   **Language**: [TypeScript](https://www.typescriptlang.org/)
+-   **Styling**:
+    -   [Tailwind CSS v4](https://tailwindcss.com/)
+    -   [Shadcn/ui](https://ui.shadcn.com/) (Component Library)
+    -   [Lucide React](https://lucide.dev/) (Icons)
+-   **State Management & Data Fetching**:
+    -   [React Query (@tanstack/react-query)](https://tanstack.com/query/latest)
+-   **Forms & Validation**:
+    -   [React Hook Form](https://react-hook-form.com/)
+    -   [Zod](https://zod.dev/)
+-   **Backend Integration**: Custom hooks connecting to a separate backend service (`tuition_genie_backend`).
+
+## 📂 Project Structure
+
+```
+tuition_genie/
+├── app/                  # Next.js App Router pages
+│   ├── classes/          # Class management routes
+│   ├── dashboard/        # Main dashboard
+│   ├── login/            # Authentication
+│   ├── students/         # Student management routes
+│   └── ...
+├── components/           # Reusable UI components
+│   ├── ui/               # Shadcn UI primitives
+│   ├── add-*-modal.tsx   # Feature-specific modals
+│   └── ...
+├── hooks/                # Custom React hooks for API integration
+├── lib/                  # Utilities and types
+└── public/               # Static assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ⚡ Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1.  **Clone the repository:**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    ```bash
+    git clone <repository-url>
+    cd tuition_genie
+    ```
 
-## Learn More
+2.  **Install dependencies:**
 
-To learn more about Next.js, take a look at the following resources:
+    ```bash
+    npm install
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3.  **Run the development server:**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    ```bash
+    npm run dev
+    ```
 
-## Deploy on Vercel
+    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4.  **Backend Setup:**
+    Ensure the `tuition_genie_backend` service is running and accessible. Configure the API endpoint in your environment variables if necessary (check `.env.local`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎨 Design Philosophy
+
+Tuition Genie prioritizes **visual excellence**. The application features:
+-   Curated color palettes and glassmorphism effects.
+-   Inter font for clean, modern typography.
+-   Micro-animations for enhanced engagement.
+-   A "wow" factor in every interaction.
+
+---
+
+Built with ❤️ by the Tuition Genie Team.

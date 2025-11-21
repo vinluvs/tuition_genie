@@ -89,7 +89,6 @@ export default function AddStudentModal({
           ? student.class?._id
           : student.class) || null
       );
-      setInterests(student.interests?.join(", ") || "");
     } else {
       resetForm();
     }
@@ -316,8 +315,8 @@ export default function AddStudentModal({
                       {saving
                         ? "Saving..."
                         : student
-                        ? "Update Student"
-                        : "Create Student"}
+                          ? "Update Student"
+                          : "Create Student"}
                     </Button>
                   </div>
                 </div>

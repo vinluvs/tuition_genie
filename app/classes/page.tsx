@@ -3,12 +3,13 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Search, Plus, ArrowRight } from "lucide-react";
+import MainAppLayout from "@/components/MainAppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useClasses } from "@/hooks/classes";
 import AddClassModal from "@/components/add-class-modal";
 
-export default function ClassesPage() {
+function ClassesPageContent() {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,97 +35,103 @@ export default function ClassesPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-linear-to-b from-slate-900 via-[#071021] to-black text-slate-100 px-6 py-8">
-        <div className="max-w-5xl mx-auto">
-          <header className="flex items-start md:items-center justify-between gap-4 mb-6 flex-col md:flex-row">
-            <div>
-              <h1 className="text-3xl font-extrabold">Classes</h1>
-              <p className="text-slate-400 text-sm mt-1">
-                Manage batches and class details.
-              </p>
-            </div>
+      <div className="max-w-5xl mx-auto">
+        <header className="flex items-start md:items-center justify-between gap-4 mb-6 flex-col md:flex-row">
+          <div>
+            <h1 className="text-3xl text-emerald-600 font-extrabold">Classes</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Manage batches and class details.
+            </p>
+          </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="flex items-center gap-2 bg-slate-900/40 rounded-md px-3 py-2">
-                <Search size={16} className="text-slate-400" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search classes or instructor"
-                  className="bg-transparent outline-none placeholder:text-slate-500"
-                />
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 bg-accent/50 rounded-md px-3 py-2">
+              <Search size={16} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search classes or instructor"
+                className="bg-transparent outline-none placeholder:text-slate-500"
+              />
+            </div>
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus size={14} /> New Class
+            </Button>
+          </div>
+        </header>
+
+        <Card >
+          <CardContent className="p-0">
+            {error && (
+              <div className="py-10 text-center text-red-400">
+                Failed to load classes.
               </div>
-              <Button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus size={14} /> New Class
-              </Button>
-            </div>
-          </header>
-
-          <Card className="bg-linear-to-br from-[#021022] to-[#051026] border border-slate-800">
-            <CardContent className="p-0">
-              {error && (
-                <div className="py-10 text-center text-red-400">
-                  Failed to load classes.
-                </div>
-              )}
-              {isLoading && !error ? (
-                <div className="py-10 text-center text-slate-400">
-                  Loading classes…
-                </div>
-              ) : (
-                <ul className="divide-y divide-slate-800">
-                  {filtered.length === 0 ? (
-                    <div className="py-6 text-center text-slate-500">
-                      No classes found.
-                    </div>
-                  ) : (
-                    filtered.map((c) => (
-                      <motion.li
-                        key={c._id}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        whileHover={{ scale: 1.01 }}
-                        className="flex items-center justify-between py-4 px-6"
-                      >
-                        <div>
-                          <div className="font-medium">{c.name}</div>
-                          <div className="text-xs text-slate-500">
-                            {c.instructor || "No instructor assigned"} | Fee: ₹
-                            {c.feePerMonthINR.toLocaleString("en-IN")} /mo
+            )}
+            {isLoading && !error ? (
+              <div className="py-10 text-center">
+                Loading classes…
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {filtered.length === 0 ? (
+                  <div className="py-6 text-center ">
+                    No classes found.
+                  </div>
+                ) : (
+                  filtered.map((c) => (
+                    <motion.li
+                      key={c._id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.01 }}
+                      className="flex items-center justify-between py-4 px-6"
+                    >
+                      <div>
+                        <div className="font-medium">{c.name}</div>
+                        <div className="text-xs ">
+                          {c.instructor || "No instructor assigned"} | Fee: ₹
+                          {c.feePerMonthINR.toLocaleString("en-IN")} /mo
+                        </div>
+                        {c.schedule?.startTime && c.schedule?.endTime && (
+                          <div className="text-xs text-emerald-400 mt-1">
+                            **Schedule:** {c.schedule?.days?.join(", ")} (
+                            {c.schedule?.startTime} - {c.schedule?.endTime})
                           </div>
-                          {c.schedule?.startTime && c.schedule?.endTime && (
-                            <div className="text-xs text-emerald-400 mt-1">
-                              **Schedule:** {c.schedule?.days?.join(", ")} (
-                              {c.schedule?.startTime} - {c.schedule?.endTime})
-                            </div>
-                          )}
-                        </div>
+                        )}
+                      </div>
 
-                        <div className="flex items-center gap-4">
-                          <Link
-                            href={`/classes/${c._id}`}
-                            className="p-2 rounded-md hover:bg-slate-800/40"
-                          >
-                            <ArrowRight />
-                          </Link>
-                        </div>
-                      </motion.li>
-                    ))
-                  )}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+                      <div className="flex items-center gap-4">
+                        <Link
+                          href={`/classes/${c._id}`}
+                          className="p-2 rounded-md hover:bg-slate-800/40"
+                        >
+                          <ArrowRight />
+                        </Link>
+                      </div>
+                    </motion.li>
+                  ))
+                )}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <AddClassModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
     </>
+  );
+}
+
+export default function ClassesPage() {
+  return (
+    <MainAppLayout>
+      <ClassesPageContent />
+    </MainAppLayout>
   );
 }
