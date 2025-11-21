@@ -63,11 +63,6 @@ export const CreateClassPayloadSchema = z.object({
 /* -----------------------------------------
    STUDENT
 ----------------------------------------- */
-export const AttendanceEntrySchema = z.object({
-  student: IDSchema,
-  status: z.enum(['present', 'absent', 'late', 'excused'])
-});
-
 export const StudentSchema = z.object({
   _id: IDSchema,
   userId: IDSchema,
@@ -76,9 +71,7 @@ export const StudentSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   dob: z.string().optional(),
-  gender: z.string().optional(),
   class: IDSchema,
-  interests: z.array(z.string()).optional(),
   totalpoints: z.number().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -90,9 +83,8 @@ export const CreateStudentPayloadSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   dob: z.string().optional(),
-  gender: z.string().optional(),
   class: IDSchema,
-  interests: z.array(z.string()).optional(),
+  totalpoints: z.number().optional(),
 });
 
 /* -----------------------------------------
@@ -131,7 +123,6 @@ export const ClassLogSchema = z.object({
   date: ISOSchema,
   topic: z.string().optional(),
   homework: z.string().optional(),
-  attendance: z.array(AttendanceEntrySchema),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -141,7 +132,6 @@ export const CreateClassLogPayloadSchema = z.object({
   date: ISOSchema,
   topic: z.string().optional(),
   homework: z.string().optional(),
-  attendance: z.array(AttendanceEntrySchema).optional(),
 });
 
 /* -----------------------------------------
@@ -171,6 +161,29 @@ export const CreateTestPayloadSchema = z.object({
   title: z.string(),
   totalMarks: z.number(),
   scores: z.array(TestScoreEntrySchema),
+});
+
+/* -----------------------------------------
+   EXPENSE
+----------------------------------------- */
+export const ExpenseSchema = z.object({
+  _id: IDSchema,
+  userId: IDSchema,
+  title: z.string(),
+  amount: z.number(),
+  category: z.string().optional(),
+  date: ISOSchema.optional(),
+  notes: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const CreateExpensePayloadSchema = z.object({
+  title: z.string(),
+  amount: z.number(),
+  category: z.string().optional(),
+  date: ISOSchema.optional(),
+  notes: z.string().optional(),
 });
 
 /* -----------------------------------------

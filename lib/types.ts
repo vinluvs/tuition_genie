@@ -4,7 +4,7 @@
 export type ID = string;
 
 export type ApiList<T> = { items: T[]; total?: number };
-export type ApiError = { status?: number; error?: string; [k: string]: any };
+export type ApiError = { status?: number; error?: string;[k: string]: any };
 
 /* -----------------------
    User
@@ -62,9 +62,7 @@ export type StudentModel = {
   phone?: string;
   address?: string;
   dob?: string; // ISO date
-  gender?: 'Male' | 'Female' | 'Other' | string;
   class?: ClassModel | ID;
-  interests?: string[];
   totalpoints?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -72,13 +70,11 @@ export type StudentModel = {
 
 export type CreateStudentPayload = {
   name: string;
-  parentsName?: string;
-  phone?: string;
-  address?: string;
-  dob?: string;
-  gender?: string;
+  parentsName: string;
+  phone: string;
+  address: string;
+  dob: string;
   class: ID;
-  interests?: string[];
   totalpoints?: number;
 };
 export type UpdateStudentPayload = Partial<CreateStudentPayload>;
@@ -100,7 +96,6 @@ export type FeeModel = {
   paidINR: number;
   method?: FeeMethod | null;
   status: FeeStatus;
-  referenceId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -112,15 +107,11 @@ export type GenerateFeePayload = {
   baseAmountINR?: number;
   discountINR?: number;
 };
-export type UpdateFeePayload = Partial<{ paidINR: number; method: FeeMethod; referenceId: string; status: FeeStatus }>;
+export type UpdateFeePayload = Partial<{ paidINR: number; method: FeeMethod; status: FeeStatus }>;
 
 /* -----------------------
    ClassLog
    ----------------------- */
-export type AttendanceEntry = {
-  student: StudentModel | ID;
-  status: 'present' | 'absent' | 'late' | 'excused';
-};
 
 export type ClassLogModel = {
   _id: ID;
@@ -129,7 +120,6 @@ export type ClassLogModel = {
   date: string; // ISO
   topic?: string;
   homework?: string;
-  attendance: AttendanceEntry[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -139,7 +129,6 @@ export type CreateClassLogPayload = {
   date: string; // ISO
   topic?: string;
   homework?: string;
-  attendance?: { student: ID; status?: AttendanceEntry['status'] }[];
 };
 export type UpdateClassLogPayload = Partial<CreateClassLogPayload>;
 
@@ -233,9 +222,6 @@ export type StudentReport = {
   parentsName?: string;
   phone?: string;
   metrics: {
-    attendancePercentage: number | 'N/A';
-    classesAttended: number;
-    classesTotal: number;
     academicPercentage: number | 'N/A';
     testsTaken: number;
   };
