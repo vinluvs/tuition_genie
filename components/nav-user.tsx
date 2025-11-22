@@ -47,6 +47,10 @@ export function NavUser({
     router.push("/login")
   }
 
+  const handleAccount = () => {
+    router.push("/settings")
+  }
+
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
     if (!name) return "U"
@@ -97,7 +101,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAccount}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>

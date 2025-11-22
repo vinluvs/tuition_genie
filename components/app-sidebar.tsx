@@ -9,7 +9,6 @@ import {
   DollarSign,
   ClipboardList,
   TrendingDown,
-  Settings,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -63,11 +62,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Expenses",
       url: "/expenses",
       icon: TrendingDown,
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
     },
   ]
 
