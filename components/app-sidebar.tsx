@@ -6,6 +6,10 @@ import {
   Users,
   GraduationCap,
   BookOpen,
+  DollarSign,
+  ClipboardList,
+  TrendingDown,
+  Settings,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -39,6 +43,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Classes",
       url: "/classes",
       icon: GraduationCap,
+    },
+    {
+      title: "Class Logs",
+      url: "/classlogs",
+      icon: BookOpen,
+    },
+    {
+      title: "Class Tests",
+      url: "/tests",
+      icon: ClipboardList,
+    },
+    {
+      title: "Fees",
+      url: "/fees",
+      icon: DollarSign,
+    },
+    {
+      title: "Expenses",
+      url: "/expenses",
+      icon: TrendingDown,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings,
     },
   ]
 

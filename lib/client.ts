@@ -212,6 +212,13 @@ export const client = {
   async deleteExpense(id: ID): Promise<void> {
     await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
   },
+  async updateExpense(id: ID, payload: Partial<CreateExpensePayload>): Promise<ExpenseModel> {
+    return apiFetch(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<ExpenseModel>;
+  },
+
+  async updateUser(payload: Partial<User>): Promise<User> {
+    return apiFetch('/auth/me', { method: 'PATCH', body: JSON.stringify(payload) }) as Promise<User>;
+  },
 
   /* Reports */
   async getDashboardReports(params?: ReportsParams): Promise<ReportsDashboard> {

@@ -6,15 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { X, Plus, Trash2 } from "lucide-react";
-import { useCreateTest } from "@/hooks/tests";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { X } from "lucide-react";
+import { useCreateTest, useUpdateTest } from "@/hooks/tests";
 import { useStudents } from "@/hooks/students";
-import type { StudentModel } from "@/lib/types";
+import { useClasses } from "@/hooks/classes";
+import type { StudentModel, TestScoreModel } from "@/lib/types";
 
 type Props = {
     isOpen: boolean;
     onClose: () => void;
-    classId: string;
+    classId?: string;
+    test?: TestScoreModel;
 };
 
 type StudentScore = {
@@ -27,38 +36,87 @@ export default function AddTestScoreModal({
     isOpen,
     onClose,
     classId,
+    test,
 }: Props) {
     const [date, setDate] = useState("");
     const [title, setTitle] = useState("");
     const [totalMarks, setTotalMarks] = useState("");
+    const [selectedClassId, setSelectedClassId] = useState(classId || "");
     const [studentScores, setStudentScores] = useState<StudentScore[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     const createMutation = useCreateTest();
-    const { data: studentsData } = useStudents({ class: classId });
+    const updateMutation = useUpdateTest();
+    const { data: studentsData } = useStudents({ class: selectedClassId });
+    const { data: classesData } = useClasses();
+    const classes = classesData?.items || [];
+
+    useEffect(() => {
+        if (isOpen) {
+            if (test) {
+                // Edit mode
+                setDate(new Date(test.date).toISOString().split("T")[0]);
+                setTitle(test.title);
+                setTotalMarks(test.totalMarks.toString());
+                setSelectedClassId(typeof test.class === 'object' ? test.class._id : test.class);
+
+                // We need to map existing scores and also include any new students who might not have scores yet
+                // But for simplicity in edit mode, we usually just show existing scores or re-fetch students
+                // Let's rely on studentsData to get all students, and fill in marks from test.scores
+            } else {
+                // Create mode
+                if (classId) {
+                    setSelectedClassId(classId);
+                }
+                setDate(new Date().toISOString().split("T")[0]);
+                setTitle("");
+                setTotalMarks("");
+            }
+        } else {
+            resetForm();
+        }
+    }, [isOpen, classId, test]);
 
     useEffect(() => {
         if (isOpen && studentsData?.items) {
-            // Initialize scores for all students in the class
-            const scores = studentsData.items.map((student: StudentModel) => ({
-                studentId: student._id,
-                studentName: student.name,
-                marksObtained: 0,
-            }));
-            setStudentScores(scores);
-            setDate(new Date().toISOString().split("T")[0]);
+            if (test && selectedClassId === (typeof test.class === 'object' ? test.class._id : test.class)) {
+                // Merge existing scores with student list
+                const scores = studentsData.items.map((student: StudentModel) => {
+                    const existingScore = test.scores.find(s =>
+                        (typeof s.student === 'object' ? s.student._id : s.student) === student._id
+                    );
+                    return {
+                        studentId: student._id,
+                        studentName: student.name,
+                        marksObtained: existingScore ? existingScore.marksObtained : 0,
+                    };
+                });
+                setStudentScores(scores);
+            } else if (!test) {
+                // New test, init with 0
+                const scores = studentsData.items.map((student: StudentModel) => ({
+                    studentId: student._id,
+                    studentName: student.name,
+                    marksObtained: 0,
+                }));
+                setStudentScores(scores);
+            }
+        } else if (isOpen && !selectedClassId) {
+            setStudentScores([]);
         }
-    }, [isOpen, studentsData]);
+    }, [studentsData, isOpen, selectedClassId, test]);
 
     const resetForm = () => {
         setDate(new Date().toISOString().split("T")[0]);
         setTitle("");
         setTotalMarks("");
         setStudentScores([]);
+        setSelectedClassId(classId || "");
         setError(null);
     };
 
     const validate = () => {
+        if (!selectedClassId) return "Class is required";
         if (!date) return "Date is required";
         if (!title.trim()) return "Test title is required";
         if (!totalMarks || parseFloat(totalMarks) <= 0) return "Total marks must be greater than 0";
@@ -84,7 +142,7 @@ export default function AddTestScoreModal({
 
         try {
             const payload = {
-                class: classId,
+                class: selectedClassId,
                 date: new Date(date).toISOString(),
                 title: title.trim(),
                 totalMarks: parseFloat(totalMarks),
@@ -94,7 +152,14 @@ export default function AddTestScoreModal({
                 })),
             };
 
-            await createMutation.mutateAsync(payload);
+            if (test) {
+                await updateMutation.mutateAsync({
+                    id: test._id,
+                    payload
+                });
+            } else {
+                await createMutation.mutateAsync(payload);
+            }
 
             resetForm();
             onClose();
@@ -104,7 +169,7 @@ export default function AddTestScoreModal({
         }
     };
 
-    const isLoading = createMutation.isPending;
+    const isLoading = createMutation.isPending || updateMutation.isPending;
 
     return (
         <AnimatePresence>
@@ -129,7 +194,9 @@ export default function AddTestScoreModal({
                     >
                         <Card className="bg-linear-to-br from-[#051126] to-[#081427] border border-slate-800 rounded-2xl shadow-2xl p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold">Add Test Scores</h3>
+                                <h3 className="text-lg font-semibold">
+                                    {test ? "Edit Test Scores" : "Add Test Scores"}
+                                </h3>
                                 <button
                                     aria-label="Close"
                                     onClick={onClose}
@@ -140,6 +207,29 @@ export default function AddTestScoreModal({
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {!classId && (
+                                        <div>
+                                            <label className="block text-xs text-slate-300 mb-1">
+                                                Class<span className="text-rose-400">*</span>
+                                            </label>
+                                            <Select
+                                                value={selectedClassId}
+                                                onValueChange={setSelectedClassId}
+                                                disabled={!!test} // Disable class change in edit mode for simplicity
+                                            >
+                                                <SelectTrigger className="bg-slate-950 border-slate-800">
+                                                    <SelectValue placeholder="Select a class" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {classes.map((cls) => (
+                                                        <SelectItem key={cls._id} value={cls._id}>
+                                                            {cls.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-xs text-slate-300 mb-1">
                                             Date<span className="text-rose-400">*</span>
@@ -148,7 +238,7 @@ export default function AddTestScoreModal({
                                             type="date"
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
-                                            autoFocus
+                                            autoFocus={!!classId && !test}
                                         />
                                     </div>
                                     <div>
@@ -217,7 +307,9 @@ export default function AddTestScoreModal({
                                     </div>
                                     {studentScores.length === 0 && (
                                         <div className="text-center text-slate-400 py-8">
-                                            No students found in this class
+                                            {selectedClassId
+                                                ? "No students found in this class"
+                                                : "Select a class to view students"}
                                         </div>
                                     )}
                                 </div>
@@ -237,7 +329,7 @@ export default function AddTestScoreModal({
                                             Cancel
                                         </Button>
                                         <Button type="submit" disabled={isLoading}>
-                                            {isLoading ? "Saving..." : "Save Test Scores"}
+                                            {isLoading ? "Saving..." : test ? "Update Scores" : "Save Test Scores"}
                                         </Button>
                                     </div>
                                 </div>

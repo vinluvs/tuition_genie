@@ -59,7 +59,7 @@ function StudentsPageContent() {
               Search students
             </label>
             <div className="flex items-center gap-2 bg-slate-900/40 rounded-md px-3 py-2">
-              <Search size={16} className="text-slate-400" />
+              <Search size={16} />
               <input
                 id="search"
                 value={query}
@@ -88,7 +88,7 @@ function StudentsPageContent() {
       </header>
 
       <section>
-        <Card className="bg-linear-to-br from-[#021022] to-[#051026] border border-slate-800">
+        <Card>
           <CardContent>
             {isLoading ? (
               <div className="py-10 text-center text-slate-400">
@@ -101,7 +101,7 @@ function StudentsPageContent() {
             ) : (
               <div className="space-y-2">
                 {students.length === 0 ? (
-                  <div className="py-12 text-center text-slate-500">
+                  <div className="py-12 text-center text-muted-foreground">
                     No students match your search.
                   </div>
                 ) : (

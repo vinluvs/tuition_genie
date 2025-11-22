@@ -13,19 +13,23 @@ import {
   ClipboardList,
   Calendar,
   DollarSign,
-  Eye
+  Eye,
+  Receipt
 } from "lucide-react";
 import MainAppLayout from "@/components/MainAppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { useClass, useDeleteClass } from "@/hooks/classes";
 import { useStudents } from "@/hooks/students";
 import { useClassLogs, useDeleteClassLog } from "@/hooks/classlogs";
 import { useTests, useDeleteTest } from "@/hooks/tests";
+import { useBulkGenerateFees } from "@/hooks/fees";
 import AddClassLogModal from "@/components/add-classlog-modal";
 import AddTestScoreModal from "@/components/add-testscore-modal";
 import type { StudentModel, ClassLogModel, TestScoreModel } from "@/lib/types";
+import { toast } from "sonner";
 
 function ClassDetailPageContent({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -34,6 +38,11 @@ function ClassDetailPageContent({ params }: { params: { id: string } }) {
   const [addClassLogOpen, setAddClassLogOpen] = useState(false);
   const [addTestScoreOpen, setAddTestScoreOpen] = useState(false);
   const [editingClassLog, setEditingClassLog] = useState<ClassLogModel | undefined>();
+  const [editingTest, setEditingTest] = useState<TestScoreModel | undefined>();
+
+  // Bulk Bill State
+  const [bulkBillOpen, setBulkBillOpen] = useState(false);
+  const [bulkMonth, setBulkMonth] = useState(new Date().toISOString().slice(0, 7));
 
   const { data: cls, isLoading, error } = useClass(id);
   const { data: studentsData } = useStudents({ class: id });
@@ -43,15 +52,34 @@ function ClassDetailPageContent({ params }: { params: { id: string } }) {
   const deleteClassMutation = useDeleteClass();
   const deleteClassLogMutation = useDeleteClassLog();
   const deleteTestMutation = useDeleteTest();
+  const bulkGenerateFeesMutation = useBulkGenerateFees();
 
   const handleDelete = async () => {
     deleteClassMutation.mutate(id, {
       onSuccess: () => router.push("/classes"),
       onError: (e) => {
         console.error(e);
-        alert("Could not delete class");
+        toast.error("Could not delete class");
       },
     });
+  };
+
+  const handleBulkGenerate = async () => {
+    if (!bulkMonth) {
+      toast.error("Please select a month");
+      return;
+    }
+
+    try {
+      await bulkGenerateFeesMutation.mutateAsync({
+        classId: id,
+        month: bulkMonth
+      });
+      toast.success("Bills generated successfully for all students");
+      setBulkBillOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate bills");
+    }
   };
 
   const handleDeleteClassLog = async (logId: string) => {
@@ -108,6 +136,12 @@ function ClassDetailPageContent({ params }: { params: { id: string } }) {
               </div>
 
               <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => setBulkBillOpen(true)}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  <Receipt size={14} /> Generate Bills
+                </Button>
                 <Button
                   onClick={() => setConfirmDelete(true)}
                   variant="destructive"
@@ -380,6 +414,16 @@ function ClassDetailPageContent({ params }: { params: { id: string } }) {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => {
+                                  setEditingTest(test);
+                                  setAddTestScoreOpen(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleDeleteTest(test._id)}
                               >
                                 <Trash2 size={14} />
@@ -436,9 +480,61 @@ function ClassDetailPageContent({ params }: { params: { id: string } }) {
 
       <AddTestScoreModal
         isOpen={addTestScoreOpen}
-        onClose={() => setAddTestScoreOpen(false)}
+        onClose={() => {
+          setAddTestScoreOpen(false);
+          setEditingTest(undefined);
+        }}
         classId={id}
+        test={editingTest}
       />
+
+      {/* Bulk Bill Modal */}
+      {bulkBillOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setBulkBillOpen(false)}
+          />
+          <motion.div
+            initial={{ scale: 0.98, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative bg-slate-900 rounded-lg p-6 z-10 w-full max-w-md border border-slate-800"
+          >
+            <div className="text-lg font-semibold flex items-center gap-2 text-white mb-4">
+              <Receipt className="text-indigo-400" /> Generate Bulk Bills
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Select Month</label>
+                <Input
+                  type="month"
+                  value={bulkMonth}
+                  onChange={(e) => setBulkMonth(e.target.value)}
+                  className="bg-slate-950 border-slate-800"
+                />
+              </div>
+
+              <div className="text-sm text-slate-400 bg-slate-800/50 p-3 rounded-md">
+                This will generate a pending fee record for {students.length} students in this class for the selected month.
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setBulkBillOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkGenerate}
+                disabled={bulkGenerateFeesMutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {bulkGenerateFeesMutation.isPending ? "Generating..." : "Generate Bills"}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Delete Confirmation */}
       {confirmDelete && (

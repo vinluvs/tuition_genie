@@ -7,14 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { X } from "lucide-react";
 import { useCreateClassLog, useUpdateClassLog } from "@/hooks/classlogs";
+import { useClasses } from "@/hooks/classes";
 import type { ClassLogModel } from "@/lib/types";
 
 type Props = {
     isOpen: boolean;
     onClose: () => void;
-    classId: string;
+    classId?: string;
     classLog?: ClassLogModel;
 };
 
@@ -27,30 +35,38 @@ export default function AddClassLogModal({
     const [date, setDate] = useState("");
     const [topic, setTopic] = useState("");
     const [homework, setHomework] = useState("");
+    const [selectedClassId, setSelectedClassId] = useState(classId || "");
     const [error, setError] = useState<string | null>(null);
 
     const createMutation = useCreateClassLog();
     const updateMutation = useUpdateClassLog();
+    const { data: classesData } = useClasses();
+    const classes = classesData?.items || [];
 
     useEffect(() => {
         if (classLog) {
             setDate(classLog.date?.split("T")[0] || "");
             setTopic(classLog.topic || "");
             setHomework(classLog.homework || "");
+            // If editing, use the class from the log if available, or the prop
+            const logClassId = typeof classLog.class === 'object' ? classLog.class._id : classLog.class;
+            setSelectedClassId(logClassId || classId || "");
         } else {
             resetForm();
         }
-    }, [classLog, isOpen]);
+    }, [classLog, isOpen, classId]);
 
     const resetForm = () => {
         setDate(new Date().toISOString().split("T")[0]);
         setTopic("");
         setHomework("");
+        setSelectedClassId(classId || "");
         setError(null);
     };
 
     const validate = () => {
         if (!date) return "Date is required";
+        if (!selectedClassId) return "Class is required";
         return null;
     };
 
@@ -63,7 +79,7 @@ export default function AddClassLogModal({
 
         try {
             const payload = {
-                class: classId,
+                class: selectedClassId,
                 date: new Date(date).toISOString(),
                 topic: topic.trim() || undefined,
                 homework: homework.trim() || undefined,
@@ -124,6 +140,29 @@ export default function AddClassLogModal({
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid grid-cols-1 gap-4">
+                                    {!classId && (
+                                        <div>
+                                            <label className="block text-xs text-slate-300 mb-1">
+                                                Class<span className="text-rose-400">*</span>
+                                            </label>
+                                            <Select
+                                                value={selectedClassId}
+                                                onValueChange={setSelectedClassId}
+                                                disabled={!!classLog} // Disable changing class when editing
+                                            >
+                                                <SelectTrigger className="bg-slate-950 border-slate-800">
+                                                    <SelectValue placeholder="Select a class" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {classes.map((cls) => (
+                                                        <SelectItem key={cls._id} value={cls._id}>
+                                                            {cls.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-xs text-slate-300 mb-1">
                                             Date<span className="text-rose-400">*</span>
@@ -132,7 +171,7 @@ export default function AddClassLogModal({
                                             type="date"
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
-                                            autoFocus
+                                            autoFocus={!!classId}
                                         />
                                     </div>
                                     <div>

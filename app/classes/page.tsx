@@ -77,7 +77,7 @@ function ClassesPageContent() {
             ) : (
               <ul className="divide-y">
                 {filtered.length === 0 ? (
-                  <div className="py-6 text-center ">
+                  <div className="py-6 text-center text-muted-foreground">
                     No classes found.
                   </div>
                 ) : (

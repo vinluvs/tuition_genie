@@ -11,7 +11,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useLogin } from "@/hooks/auth";
+import { useLogin, useMe } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
 import React from "react";
 import { toast } from "sonner";
@@ -21,7 +21,14 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+  const { data: user, isLoading: isUserLoading } = useMe();
   const loginMutation = useLogin();
+
+  React.useEffect(() => {
+    if (user && !isUserLoading) {
+      router.push("/dashboard");
+    }
+  }, [user, isUserLoading, router]);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
 
@@ -32,7 +39,7 @@ export function LoginForm({
       {
         onSuccess: () => {
           toast.success("Logged in successfully");
-          router.push("/");
+          router.push("/dashboard");
         },
         onError: (error) => {
           toast.error(error.message);

@@ -11,7 +11,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useSignup } from "@/hooks/auth";
+import { useSignup, useMe } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
 import React from "react";
 import { toast } from "sonner";
@@ -21,7 +21,14 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+  const { data: user, isLoading: isUserLoading } = useMe();
   const signupMutation = useSignup();
+
+  React.useEffect(() => {
+    if (user && !isUserLoading) {
+      router.push("/dashboard");
+    }
+  }, [user, isUserLoading, router]);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [name, setName] = React.useState("");

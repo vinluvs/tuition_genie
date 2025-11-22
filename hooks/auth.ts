@@ -1,7 +1,7 @@
 // src/lib/hooks/auth.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '@/lib/client';
-import type { LoginPayload, SignupPayload } from '@/lib/types';
+import type { LoginPayload, SignupPayload, User } from '@/lib/types';
 import type { InferClientReturn } from '@/lib/utils';
 import { qkey } from '@/lib/utils';
 
@@ -12,6 +12,14 @@ export function useMe() {
     queryFn: () => client.me(),
     staleTime: 1000 * 60 * 5,
     retry: 1,
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Partial<User>) => client.updateUser(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
   });
 }
 
